@@ -19,6 +19,18 @@ With L and P2S fixed, the null radii always satisfy `r1 * r2 = L^2 - P2S^2`.
 
 Print at **100% / actual size** (no fit-to-page) and check the 100 mm bar before punching the spindle hole.
 
+## Adjusting from a miss at the outer groove
+
+Turn the printed protractor until the stylus is on the arc at 60 mm, then read the miss X (mm) at 146 mm along the arm
+(positive = past the arc, away from the pivot).
+
+- Arm base can move: actual P2S = protractor P2S + X / k_p2s, with k_p2s = sin(a2 - a1) / sin(a1).
+- P2S is fixed: change the overhang by X / k_ovh, with k_ovh = sin(a2) / sin(a1) - 1. Increase it for positive X.
+- a1 and a2 are the angles at the arm pivot, cos(a) = (P2S^2 + L^2 - r^2) / (2 * P2S * L), at r = 60 and 146 mm.
+
+For L = 233.15 mm and P2S = 214 mm: k_p2s = 1.56 (P2S change = 0.64 X) and k_ovh = 1.43 (overhang change = 0.70 X).
+The app also has a calculator that solves the exact geometry.
+
 ## Run locally
 
     pip install -r requirements.txt

@@ -379,6 +379,60 @@ def error_figure(g, label):
     return fig
 
 
+# ------------------------------------------------ fixing a miss at the outer groove
+R_MATCH, R_CHECK = 60.0, 146.0     # tip matched on the arc at 60 mm, miss read at 146 mm
+
+
+def _theta(d, L, r):
+    """Angle at the spindle between the pivot axis and the stylus."""
+    return math.acos((d * d + r * r - L * L) / (2.0 * d * r))
+
+
+def _alpha(d, L, r):
+    """Angle at the arm pivot between the spindle and the stylus."""
+    return math.acos((d * d + L * L - r * r) / (2.0 * d * L))
+
+
+def miss_at_check(d, L, dp, Lp, r1=R_MATCH, r2=R_CHECK):
+    """Real arm (pivot distance d, effective length L) on a protractor drawn for (dp, Lp).
+    The protractor is turned so the tip is on the arc at r1. Returns the tip's distance from
+    the arc at r2, measured along the arm. Positive = past the arc, away from the pivot."""
+    phi = _theta(d, L, r1) - _theta(dp, Lp, r1)
+    a = _theta(d, L, r2) - phi
+    D = math.sqrt(dp * dp + r2 * r2 - 2.0 * dp * r2 * math.cos(a))
+    return D - Lp
+
+
+def _bisect(f, lo, hi):
+    flo = f(lo)
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        fm = f(mid)
+        if flo * fm <= 0:
+            hi = mid
+        else:
+            lo, flo = mid, fm
+    return 0.5 * (lo + hi)
+
+
+def rule_factors(dp, Lp, r1=R_MATCH, r2=R_CHECK):
+    """First-order factors: P2S change = X / k_p2s, overhang change = X / k_ovh."""
+    a1, a2 = _alpha(dp, Lp, r1), _alpha(dp, Lp, r2)
+    k_p2s = math.sin(a2 - a1) / math.sin(a1)
+    k_ovh = math.sin(a2) / math.sin(a1) - 1.0
+    return k_p2s, k_ovh
+
+
+def actual_p2s(dp, Lp, X, r1=R_MATCH):
+    """Pivot-to-spindle of the real arm if its effective length equals Lp."""
+    return _bisect(lambda d: miss_at_check(d, Lp, dp, Lp, r1) - X, dp - 10.0, dp + 10.0)
+
+
+def actual_length(dp, Lp, X, r1=R_MATCH):
+    """Effective length of the real arm if its pivot-to-spindle equals dp."""
+    return _bisect(lambda L: miss_at_check(dp, L, dp, Lp, r1) - X, Lp - 10.0, Lp + 10.0)
+
+
 # ------------------------------------------------------------------------ UI
 st.set_page_config(page_title="Arc Protractor Generator", layout="wide")
 st.title("Arc protractor generator")
@@ -448,3 +502,52 @@ st.caption("Drawn at 1:1. Print at 100% (no fit-to-page) and check the 100 mm ba
 fig = error_figure(g, label)
 st.pyplot(fig)
 plt.close(fig)
+
+# ---------------------------------------------------------------- adjusting guide
+st.header("Adjusting from a miss at the outer groove")
+k_p2s, k_ovh = rule_factors(g["d"], g["L"])
+st.markdown(
+    "Turn the printed protractor until the stylus is **on the arc at 60 mm**, then read how far the stylus is "
+    "from the arc at **146 mm**, along the arm. Call that distance **X**: positive when the stylus is past "
+    "the arc (away from the pivot), negative when it is short of it (toward the pivot).\n\n"
+    f"- **You can move the arm base** (pivot-to-spindle is free): your actual P2S is about "
+    f"the protractor's P2S plus **{1 / k_p2s:.2f} × X**. "
+    f"To match the protractor, move the base by {1 / k_p2s:.2f} × X **toward the spindle** when X is positive, "
+    f"away from it when X is negative.\n"
+    f"- **P2S is fixed** (the arm cannot move): slide the cartridge to change the overhang. "
+    f"Increase the overhang by about **{1 / k_ovh:.2f} × X** when X is positive, and decrease it when X is "
+    f"negative. Then set the tip on the arc at 60 mm again and re-check 146 mm.\n\n"
+    f"The factors above are for this arm (L = {g['L']:.2f} mm, P2S = {g['d']:.2f} mm). They hold for misses of a "
+    f"few mm. If you match at a different radius, use the calculator below."
+)
+
+with st.expander("Calculator: find the actual P2S or effective length"):
+    cc1, cc2, cc3 = st.columns(3)
+    dp_c = cc1.number_input("Protractor P2S (mm)", min_value=100.0, max_value=400.0,
+                            value=round(g["d"], 2), step=0.05, format="%.2f")
+    Lp_c = cc2.number_input("Protractor effective length (mm)", min_value=150.0, max_value=400.0,
+                            value=round(g["L"], 2), step=0.05, format="%.2f")
+    X_c = cc3.number_input("Miss X at 146 mm (mm, + past the arc)", min_value=-10.0, max_value=10.0,
+                           value=2.0, step=0.1, format="%.2f")
+    r1_c = st.number_input("Radius where the tip is matched (mm)", min_value=50.0, max_value=100.0,
+                           value=R_MATCH, step=1.0, format="%.1f")
+    unknown = st.radio(
+        "Which value do you want to find?",
+        ["Actual P2S (my effective length is known and fixed)",
+         "Actual effective length (my P2S is known and fixed)"],
+    )
+    try:
+        kp, ko = rule_factors(dp_c, Lp_c, r1_c)
+        if unknown.startswith("Actual P2S"):
+            d_act = actual_p2s(dp_c, Lp_c, X_c, r1_c)
+            st.metric("Actual pivot-to-spindle", f"{d_act:.2f} mm",
+                      delta=f"{d_act - dp_c:+.2f} mm vs protractor", delta_color="off")
+            st.caption(f"Effective length taken as {Lp_c:.2f} mm. Rule of thumb: P2S change = {1 / kp:.2f} × X.")
+        else:
+            L_act = actual_length(dp_c, Lp_c, X_c, r1_c)
+            st.metric("Actual effective length", f"{L_act:.2f} mm",
+                      delta=f"{L_act - Lp_c:+.2f} mm vs protractor", delta_color="off")
+            st.caption(f"Pivot-to-spindle taken as {dp_c:.2f} mm. To match the protractor, change the overhang by "
+                       f"{Lp_c - L_act:+.2f} mm (rule of thumb: {1 / ko:.2f} × X).")
+    except (ValueError, ZeroDivisionError):
+        st.warning("These values do not give a valid geometry.")
