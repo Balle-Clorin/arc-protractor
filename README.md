@@ -1,7 +1,8 @@
 # Arc Protractor Generator
 
 Streamlit app that generates a true-scale arc protractor for a pivoted tonearm.
-The effective length **L** is fixed; the pivot-to-spindle distance (**P2S**) is free.
+Works for conventional arms with a fixed pivot-to-spindle distance (**P2S**) and for arms with adjustable P2S (such as the SME V).
+You enter the effective length **L**; P2S either follows from the chosen alignment or is typed in.
 
 Two ways to use it:
 
@@ -26,6 +27,10 @@ Turn the printed protractor until the stylus is on the arc at 60 mm, then read t
 
 - Arm base can move: actual P2S = protractor P2S + X / k_p2s, with k_p2s = sin(a2 - a1) / sin(a1).
 - P2S is fixed: change the overhang by X / k_ovh, with k_ovh = sin(a2) / sin(a1) - 1. Increase it for positive X.
+- Sign depends on where the tip is set on the arc. Set at 60 mm: a too long overhang shows as the tip BEHIND the arc at
+  146 mm (X negative). Set at 146 mm: the same arm shows as the tip PAST the arc at 60 mm.
+  This is counterintuitive but confirmed by a physical test: turning the protractor to put the tip on the arc at
+  60 mm shifts the arc by more than the overhang error, so the tip ends up behind the line at 146 mm.
 - a1 and a2 are the angles at the arm pivot, cos(a) = (P2S^2 + L^2 - r^2) / (2 * P2S * L), at r = 60 and 146 mm.
 
 For L = 233.15 mm and P2S = 214 mm: k_p2s = 1.56 (P2S change = 0.64 X) and k_ovh = 1.43 (overhang change = 0.70 X).

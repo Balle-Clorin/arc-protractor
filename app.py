@@ -592,8 +592,10 @@ def overhang_example_figure(dp, Lp, extra=2.0):
 # ------------------------------------------------------------------------ UI
 st.set_page_config(page_title="Arc Protractor Generator", layout="wide")
 st.title("Arc protractor generator")
-st.write("Keep the arm's effective length fixed, set the pivot-to-spindle distance yourself, "
-         "and print an arc protractor that matches your arm.")
+st.write("Print a true-scale arc protractor for your tonearm. Enter the effective length, then either choose an "
+         "alignment (Löfgren A/B, Stevenson or your own null points) or type the pivot-to-spindle distance. "
+         "It works for conventional arms with a fixed pivot-to-spindle distance and for arms with an adjustable "
+         "one, such as the SME V.")
 
 with st.sidebar:
     st.header("Arm and alignment")
