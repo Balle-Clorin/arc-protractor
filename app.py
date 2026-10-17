@@ -433,24 +433,30 @@ def actual_length(dp, Lp, X, r1=R_MATCH):
     return _bisect(lambda L: miss_at_check(dp, L, dp, Lp, r1) - X, Lp - 10.0, Lp + 10.0)
 
 
-def overhang_example_figure(dp, Lp, X=-2.0):
-    """Worked example: fixed P2S, overhang too long, tip 2 mm behind the arc at 146 mm."""
+def overhang_example_figure(dp, Lp, extra=2.0):
+    """Worked example: P2S fixed, effective length `extra` mm longer than the protractor's (overhang too long)."""
     from matplotlib.patches import Rectangle, Polygon, FancyArrowPatch
     good, muted = "#7fd48a", "#8a8a8a"
-    L_real = actual_length(dp, Lp, X)
-    too_long = L_real - Lp
+    L_real = Lp + extra
+    X = miss_at_check(dp, L_real, dp, Lp, R_MATCH, R_CHECK)              # tip set on the arc at 60 mm, read at 146 mm
+    alt_at_60 = miss_at_check(dp, L_real, dp, Lp, R_CHECK, R_MATCH)      # tip set on the arc at 146 mm, read at 60 mm
     _, k_ovh = rule_factors(dp, Lp)
     rule = abs(X) / k_ovh
     r = np.linspace(50, 150, 400)
-    g_before = np.array([miss_at_check(dp, L_real, dp, Lp, R_MATCH, x) for x in r])
+    g_60 = np.array([miss_at_check(dp, L_real, dp, Lp, R_MATCH, x) for x in r])
+    g_146 = np.array([miss_at_check(dp, L_real, dp, Lp, R_CHECK, x) for x in r])
+    side = "behind" if X < 0 else "past"
 
-    fig = plt.figure(figsize=(14.5, 9.2), facecolor=BG)
-    gs = fig.add_gridspec(2, 3, height_ratios=[1.0, 0.8], width_ratios=[1, 1, 1.25],
-                          left=0.055, right=0.985, top=0.885, bottom=0.075, hspace=0.30, wspace=0.12)
+    fig = plt.figure(figsize=(14.5, 9.6), facecolor=BG)
+    gs = fig.add_gridspec(2, 3, height_ratios=[1.0, 0.85], width_ratios=[1, 1, 1.25],
+                          left=0.055, right=0.985, top=0.855, bottom=0.075, hspace=0.30, wspace=0.12)
     fig.suptitle("Example: overhang too long. How to read the miss and fix it", color=FG,
-                 fontsize=BASE_FONT + 5, fontweight="bold", x=0.055, ha="left", y=0.975)
-    fig.text(0.055, 0.925, f"Arm with fixed P2S = {dp:.2f} mm on a protractor for L = {Lp:.2f} mm. "
-             f"Tip set on the arc at {R_MATCH:.0f} mm, then checked at {R_CHECK:.0f} mm.",
+                 fontsize=BASE_FONT + 5, fontweight="bold", x=0.055, ha="left", y=0.99)
+    fig.text(0.055, 0.940, f"Fixed P2S = {dp:.2f} mm.  Protractor for L = {Lp:.2f} mm (overhang {Lp - dp:.2f} mm).  "
+             f"Real arm: L = {L_real:.2f} mm (overhang {L_real - dp:.2f} mm), {extra:.1f} mm too long.",
+             color=muted, fontsize=BASE_FONT - 1, ha="left")
+    fig.text(0.055, 0.913, f"Protractor turned so the tip is on the arc at {R_MATCH:.0f} mm, then checked at {R_CHECK:.0f} mm.  "
+             f"Rule of thumb: overhang change = {1 / k_ovh:.2f} x |X| = {rule:.1f} mm.",
              color=muted, fontsize=BASE_FONT - 1, ha="left")
 
     def style(ax):
@@ -460,6 +466,7 @@ def overhang_example_figure(dp, Lp, X=-2.0):
         ax.tick_params(colors=FG, labelsize=BASE_FONT - 2)
 
     def zoom(ax, title, tip_gap, ok):
+        """Local view: the arc is the white line, the pivot is toward the bottom, 'past' is up."""
         style(ax)
         ax.set_xlim(-4.5, 4.5); ax.set_ylim(-4.6, 3.0); ax.set_aspect("equal")
         ax.set_xticks([]); ax.set_yticks([])
@@ -468,15 +475,16 @@ def overhang_example_figure(dp, Lp, X=-2.0):
         for xx in np.arange(-4, 4.1, 1.0):
             ax.axvline(xx, color=GRID, lw=0.7, zorder=0)
         ax.axhline(0, color=FG, lw=2.4, zorder=2)
-        ax.plot([0, 0], [tip_gap, -4.6], color=ACCENT, lw=5, solid_capstyle="butt", zorder=3)
-        ax.plot([0], [tip_gap], "o", ms=10, mfc=BG, mec=good if ok else WARN, mew=2.6, zorder=5)
+        yt = max(-4.3, min(2.6, tip_gap))
+        ax.plot([0, 0], [yt, -4.6], color=ACCENT, lw=5, solid_capstyle="butt", zorder=3)
+        ax.plot([0], [yt], "o", ms=10, mfc=BG, mec=good if ok else WARN, mew=2.6, zorder=5)
         ax.text(0.2, -4.2, "toward pivot", color=muted, fontsize=BASE_FONT - 3, ha="left", va="bottom")
         ax.text(-4.3, 0.18, "arc", color=FG, fontsize=BASE_FONT - 2, ha="left", va="bottom")
         ax.set_title(title, color=FG, fontsize=BASE_FONT, loc="left", pad=8)
-        if abs(tip_gap) > 0.05:
-            ax.annotate("", xy=(1.9, tip_gap), xytext=(1.9, 0), arrowprops=dict(arrowstyle="<->", color=WARN, lw=2))
-            ax.text(2.25, tip_gap / 2, f"X = {tip_gap:+.1f} mm\nbehind the arc", color=WARN,
-                    fontsize=BASE_FONT - 1, va="center", ha="left")
+        if not ok:
+            ax.annotate("", xy=(1.9, yt), xytext=(1.9, 0), arrowprops=dict(arrowstyle="<->", color=WARN, lw=2))
+            ax.text(2.25, yt / 2, f"X = {tip_gap:+.1f} mm\n{'behind' if tip_gap < 0 else 'past'} the arc",
+                    color=WARN, fontsize=BASE_FONT - 1, va="center", ha="left")
         else:
             ax.text(2.0, 0.55, "on the arc", color=good, fontsize=BASE_FONT - 1, va="bottom", ha="left")
         ax.plot([-4.2, -3.2], [-3.95, -3.95], color=FG, lw=2)
@@ -516,31 +524,27 @@ def overhang_example_figure(dp, Lp, X=-2.0):
     ax4 = fig.add_subplot(gs[1, :]); style(ax4)
     ax4.axvspan(RI, RO, color=ACCENT, alpha=0.07, lw=0)
     ax4.axhline(0, color=FG, lw=1.6)
-    ax4.plot(r, g_before, color=WARN, lw=2.8, label=f"before: overhang {too_long:+.1f} mm too long")
+    ax4.plot(r, np.full_like(r, extra), color=muted, lw=2.0, ls=(0, (4, 3)),
+             label=f"protractor not turned: tip {extra:.1f} mm past the arc at every radius (= the overhang error)")
+    ax4.plot(r, g_146, color=WARN, lw=2.0, ls=":",
+             label=f"protractor turned so the tip is on the arc at {R_CHECK:.0f} mm: past the arc at 60 mm ({alt_at_60:+.1f} mm)")
+    ax4.plot(r, g_60, color=WARN, lw=2.8,
+             label=f"protractor turned so the tip is on the arc at {R_MATCH:.0f} mm: {side} the arc at 146 mm ({X:+.1f} mm)")
     ax4.plot(r, np.zeros_like(r), color=good, lw=2.8, ls=(0, (6, 3)),
-             label="after: overhang corrected, tip on the arc everywhere")
-    for rv, gv in ((R_MATCH, 0.0), (R_CHECK, X)):
-        ax4.plot([rv], [gv], "o", ms=10, mfc=BG, mec=WARN, mew=2.4, zorder=5)
-    ax4.annotate("tip set on the arc here", (R_MATCH, 0), xytext=(R_MATCH + 3, 0.95), color=FG,
-                 fontsize=BASE_FONT - 1, arrowprops=dict(arrowstyle="->", color=FG, lw=1.3))
-    ax4.annotate(f"miss X = {X:.1f} mm", (R_CHECK, X), xytext=(R_CHECK - 36, X - 0.35), color=WARN,
-                 fontsize=BASE_FONT, fontweight="bold", arrowprops=dict(arrowstyle="->", color=WARN, lw=1.6))
-    ax4.text(52, 1.55, "past the arc (away from the pivot)", color=muted, fontsize=BASE_FONT - 2, va="center")
-    ax4.text(52, -2.75, "behind the arc (toward the pivot)", color=muted, fontsize=BASE_FONT - 2, va="center")
-    ax4.set_xlim(50, 150); ax4.set_ylim(-3.2, 2.0)
+             label="after the fix: tip on the arc at every radius")
+    for rv, gv in ((R_MATCH, 0.0), (R_CHECK, 0.0), (R_CHECK, X), (R_MATCH, alt_at_60)):
+        ax4.plot([rv], [gv], "o", ms=9, mfc=BG, mec=WARN, mew=2.2, zorder=5)
+    ax4.text(52, ymax_txt := extra + 1.25, "past the arc (away from the pivot) = +", color=muted,
+             fontsize=BASE_FONT - 2, va="center")
+    ax4.text(52, X - 0.95, "behind the arc (toward the pivot) = \u2212", color=muted, fontsize=BASE_FONT - 2, va="center")
+    ax4.set_xlim(50, 150); ax4.set_ylim(X - 1.4, extra + 2.3)
     ax4.set_xlabel("Radius from spindle (mm)", color=FG, fontsize=BASE_FONT)
     ax4.set_ylabel("Tip minus arc, along the arm (mm)", color=FG, fontsize=BASE_FONT)
     ax4.grid(True, color=GRID, lw=0.8)
-    leg = ax4.legend(loc="upper right", frameon=True, facecolor=BG, edgecolor=GRID, fontsize=BASE_FONT - 2)
+    leg = ax4.legend(loc="upper right", frameon=True, facecolor=BG, edgecolor=GRID, fontsize=BASE_FONT - 3)
     for t in leg.get_texts():
         t.set_color(FG)
-    ax4.text(0.02, 0.03, f"L = {Lp:.2f} mm (protractor)   P2S = {dp:.2f} mm (fixed)\n"
-             f"real effective length = {L_real:.2f} mm   miss at {R_CHECK:.0f} mm = {X:.1f} mm\n"
-             f"rule of thumb: overhang change = {1 / k_ovh:.2f} x |X| = {rule:.2f} mm (exact {too_long:.2f} mm)",
-             transform=ax4.transAxes, fontsize=BASE_FONT - 2, color=FG, va="bottom", ha="left",
-             family="monospace", bbox=dict(facecolor=BG, edgecolor=GRID, boxstyle="round,pad=0.5"))
     return fig
-
 
 # ------------------------------------------------------------------------ UI
 st.set_page_config(page_title="Arc Protractor Generator", layout="wide")
@@ -626,6 +630,15 @@ st.markdown(
     f"- **P2S is fixed** (the arm cannot move): slide the cartridge to change the overhang. "
     f"Increase the overhang by about **{1 / k_ovh:.2f} × X** when X is positive, and decrease it when X is "
     f"negative. Then set the tip on the arc at 60 mm again and re-check 146 mm.\n\n"
+    "**Which way does the sign go?** It depends on where you set the tip on the arc. "
+    "A too long overhang shows up as the tip *behind* the arc at the far end from where you set it, "
+    "when you set it at 60 mm, and as the tip *past* the arc at 60 mm when you set it at 146 mm.\n\n"
+    "| Tip set on the arc at | Tip at the other end | Overhang is | Fix |\n"
+    "|---|---|---|---|\n"
+    "| 60 mm | behind the arc at 146 mm (X negative) | too long | slide the cartridge back |\n"
+    "| 60 mm | past the arc at 146 mm (X positive) | too short | slide the cartridge forward |\n"
+    "| 146 mm | past the arc at 60 mm | too long | slide the cartridge back |\n"
+    "| 146 mm | behind the arc at 60 mm | too short | slide the cartridge forward |\n\n"
     f"The factors above are for this arm (L = {g['L']:.2f} mm, P2S = {g['d']:.2f} mm). They hold for misses of a "
     f"few mm. If you match at a different radius, use the calculator below."
 )
@@ -634,9 +647,11 @@ try:
     fig_ex = overhang_example_figure(g["d"], g["L"])
     st.pyplot(fig_ex)
     plt.close(fig_ex)
-    st.caption("Example drawn for the protractor above: a stylus that is 2 mm behind the arc at 146 mm after "
-               "being set on the arc at 60 mm means the overhang is too long. If the tip is past the arc "
-               "instead, the picture is mirrored: the overhang is too short, so slide the cartridge forward.")
+    st.caption("Example drawn for the protractor above, with the real effective length 2 mm longer (overhang 2 mm "
+               "too long, P2S fixed). Turning the protractor only tilts the error line around the radius where "
+               "you set the tip on the arc, so the same arm can show as past the arc at 60 mm (set at 146 mm) or "
+               "behind the arc at 146 mm (set at 60 mm). The sign of the miss at the far end is always the "
+               "opposite of the sign at the near end.")
 except (ValueError, ZeroDivisionError):
     pass
 
