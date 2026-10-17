@@ -434,7 +434,9 @@ def actual_length(dp, Lp, X, r1=R_MATCH):
 
 
 def overhang_example_figure(dp, Lp, extra=2.0):
-    """Worked example: P2S fixed, effective length `extra` mm longer than the protractor's (overhang too long)."""
+    """Worked example: P2S fixed, effective length `extra` mm longer than the protractor's (overhang too long).
+    Drawn as seen by a person standing in front of the turntable: the arm pivot is at the top of the picture,
+    'past the arc' is toward the viewer (down), and positive numbers are drawn below the reference line."""
     from matplotlib.patches import Rectangle, Polygon, FancyArrowPatch
     good, muted = "#7fd48a", "#8a8a8a"
     L_real = Lp + extra
@@ -447,9 +449,9 @@ def overhang_example_figure(dp, Lp, extra=2.0):
     g_146 = np.array([miss_at_check(dp, L_real, dp, Lp, R_CHECK, x) for x in r])
     side = "behind" if X < 0 else "past"
 
-    fig = plt.figure(figsize=(14.5, 9.6), facecolor=BG)
-    gs = fig.add_gridspec(2, 3, height_ratios=[1.0, 0.85], width_ratios=[1, 1, 1.25],
-                          left=0.055, right=0.985, top=0.855, bottom=0.075, hspace=0.30, wspace=0.12)
+    fig = plt.figure(figsize=(14.5, 14.0), facecolor=BG)
+    gs = fig.add_gridspec(3, 3, height_ratios=[1.0, 0.75, 0.80], width_ratios=[1, 1, 1.25],
+                          left=0.055, right=0.985, top=0.885, bottom=0.135, hspace=0.34, wspace=0.12)
     fig.suptitle("Example: overhang too long. How to read the miss and fix it", color=FG,
                  fontsize=BASE_FONT + 5, fontweight="bold", x=0.055, ha="left", y=0.99)
     fig.text(0.055, 0.940, f"Fixed P2S = {dp:.2f} mm.  Protractor for L = {Lp:.2f} mm (overhang {Lp - dp:.2f} mm).  "
@@ -466,9 +468,9 @@ def overhang_example_figure(dp, Lp, extra=2.0):
         ax.tick_params(colors=FG, labelsize=BASE_FONT - 2)
 
     def zoom(ax, title, tip_gap, ok):
-        """Local view: the arc is the white line, the pivot is toward the bottom, 'past' is up."""
+        """Local view from the front: arm pivot at the top, 'past the arc' (+) is down toward the viewer."""
         style(ax)
-        ax.set_xlim(-4.5, 4.5); ax.set_ylim(-4.6, 3.0); ax.set_aspect("equal")
+        ax.set_xlim(-4.5, 4.5); ax.set_ylim(3.0, -4.6); ax.set_aspect("equal")        # y inverted: + is down
         ax.set_xticks([]); ax.set_yticks([])
         for yy in np.arange(-4, 3.1, 1.0):
             ax.axhline(yy, color=GRID, lw=0.7, zorder=0)
@@ -476,52 +478,55 @@ def overhang_example_figure(dp, Lp, extra=2.0):
             ax.axvline(xx, color=GRID, lw=0.7, zorder=0)
         ax.axhline(0, color=FG, lw=2.4, zorder=2)
         yt = max(-4.3, min(2.6, tip_gap))
-        ax.plot([0, 0], [yt, -4.6], color=ACCENT, lw=5, solid_capstyle="butt", zorder=3)
+        ax.plot([0, 0], [yt, -4.6], color=ACCENT, lw=5, solid_capstyle="butt", zorder=3)   # cantilever runs up to the pivot
         ax.plot([0], [yt], "o", ms=10, mfc=BG, mec=good if ok else WARN, mew=2.6, zorder=5)
-        ax.text(0.2, -4.2, "toward pivot", color=muted, fontsize=BASE_FONT - 3, ha="left", va="bottom")
-        ax.text(-4.3, 0.18, "arc", color=FG, fontsize=BASE_FONT - 2, ha="left", va="bottom")
+        ax.text(0.2, -4.35, "toward pivot", color=muted, fontsize=BASE_FONT - 3, ha="left", va="top")
+        ax.text(-4.3, -0.18, "arc", color=FG, fontsize=BASE_FONT - 2, ha="left", va="bottom")
         ax.set_title(title, color=FG, fontsize=BASE_FONT, loc="left", pad=8)
         if not ok:
             ax.annotate("", xy=(1.9, yt), xytext=(1.9, 0), arrowprops=dict(arrowstyle="<->", color=WARN, lw=2))
             ax.text(2.25, yt / 2, f"X = {tip_gap:+.1f} mm\n{'behind' if tip_gap < 0 else 'past'} the arc",
                     color=WARN, fontsize=BASE_FONT - 1, va="center", ha="left")
         else:
-            ax.text(2.0, 0.55, "on the arc", color=good, fontsize=BASE_FONT - 1, va="bottom", ha="left")
-        ax.plot([-4.2, -3.2], [-3.95, -3.95], color=FG, lw=2)
-        ax.text(-3.7, -3.7, "1 mm", color=FG, fontsize=BASE_FONT - 3, ha="center", va="bottom")
+            ax.text(2.0, -0.5, "on the arc", color=good, fontsize=BASE_FONT - 1, va="bottom", ha="left")
+        ax.plot([-4.2, -3.2], [2.55, 2.55], color=FG, lw=2)
+        ax.text(-3.7, 2.3, "1 mm", color=FG, fontsize=BASE_FONT - 3, ha="center", va="bottom")
+        ax.text(4.3, 2.3, "toward you", color=muted, fontsize=BASE_FONT - 3, ha="right", va="bottom")
 
     zoom(fig.add_subplot(gs[0, 0]), "1. At 60 mm: tip on the arc", 0.0, True)
     zoom(fig.add_subplot(gs[0, 1]), "2. At 146 mm: read the miss", X, False)
 
+    # headshell sketch, seen from the front: pivot at the top, stylus pointing down toward the viewer
     ax3 = fig.add_subplot(gs[0, 2]); style(ax3)
-    ax3.set_xlim(-24, 56); ax3.set_ylim(-26, 44); ax3.set_aspect("equal"); ax3.set_xticks([]); ax3.set_yticks([])
+    ax3.set_xlim(-24, 56); ax3.set_ylim(-44, 26); ax3.set_aspect("equal"); ax3.set_xticks([]); ax3.set_yticks([])
     ax3.set_title("3. Slide the cartridge back, toward the pivot", color=FG, fontsize=BASE_FONT, loc="left", pad=8)
-    ax3.add_patch(Polygon([[-6, -20], [6, -20], [8, 6], [-8, 6]], closed=True, fc="#2c2c2c", ec=muted, lw=1.5))
-    ax3.add_patch(Rectangle((-12, 6), 24, 20, fc="#2c2c2c", ec=muted, lw=1.5))
+    ax3.add_patch(Polygon([[-6, 20], [6, 20], [8, -6], [-8, -6]], closed=True, fc="#2c2c2c", ec=muted, lw=1.5))   # arm tube
+    ax3.add_patch(Rectangle((-12, -26), 24, 20, fc="#2c2c2c", ec=muted, lw=1.5))                                    # headshell
     for sx in (-5.5, 5.5):
-        ax3.add_patch(Rectangle((sx - 1.3, 9), 2.6, 14, fc=BG, ec=muted, lw=1.2))
+        ax3.add_patch(Rectangle((sx - 1.3, -23), 2.6, 14, fc=BG, ec=muted, lw=1.2))                                 # slots
     shift = 4.0                                                    # drawn exaggerated
-    ax3.add_patch(Rectangle((-8, 10 + shift), 16, 19, fc="none", ec=WARN, lw=1.8, ls="--"))
-    ax3.add_patch(Polygon([[-1.1, 29 + shift], [1.1, 29 + shift], [0, 34 + shift]], closed=True,
+    ax3.add_patch(Rectangle((-8, -29 - shift), 16, 19, fc="none", ec=WARN, lw=1.8, ls="--"))                        # before: forward (down)
+    ax3.add_patch(Polygon([[-1.1, -29 - shift], [1.1, -29 - shift], [0, -34 - shift]], closed=True,
                           fc="none", ec=WARN, lw=1.5, ls="--"))
-    ax3.add_patch(Rectangle((-8, 10), 16, 19, fc="#2f4a52", ec=ACCENT, lw=2.2))
-    ax3.add_patch(Polygon([[-1.1, 29], [1.1, 29], [0, 34]], closed=True, fc=ACCENT, ec=ACCENT, lw=1))
-    ax3.text(0, 19, "cartridge", color=FG, fontsize=BASE_FONT - 2, ha="center", va="center")
-    ax3.add_patch(FancyArrowPatch((-16, 33), (-16, 25), arrowstyle="->", mutation_scale=18, color=ACCENT, lw=2.4))
-    ax3.text(0, -23.5, "toward pivot", color=muted, fontsize=BASE_FONT - 3, ha="center", va="center")
-    ax3.text(15, 38, f"Shorten overhang by {rule:.1f} mm", color=FG, fontsize=BASE_FONT - 1,
+    ax3.add_patch(Rectangle((-8, -29), 16, 19, fc="#2f4a52", ec=ACCENT, lw=2.2))                                    # after: moved up
+    ax3.add_patch(Polygon([[-1.1, -29], [1.1, -29], [0, -34]], closed=True, fc=ACCENT, ec=ACCENT, lw=1))            # stylus at the front
+    ax3.text(0, -19, "cartridge", color=FG, fontsize=BASE_FONT - 2, ha="center", va="center")
+    ax3.add_patch(FancyArrowPatch((-16, -33), (-16, -25), arrowstyle="->", mutation_scale=18, color=ACCENT, lw=2.4))
+    ax3.text(0, 23.5, "toward pivot", color=muted, fontsize=BASE_FONT - 3, ha="center", va="center")
+    ax3.text(15, 20, f"Shorten overhang by {rule:.1f} mm", color=FG, fontsize=BASE_FONT - 1,
              fontweight="bold", ha="left", va="center")
-    ax3.text(15, 32, f"= {1 / k_ovh:.2f} x |X| = {1 / k_ovh:.2f} x {abs(X):.1f} mm", color=muted,
+    ax3.text(15, 14, f"= {1 / k_ovh:.2f} x |X| = {1 / k_ovh:.2f} x {abs(X):.1f} mm", color=muted,
              fontsize=BASE_FONT - 2, ha="left", va="center")
-    ax3.plot([15, 19], [24, 24], color=WARN, lw=2, ls="--")
-    ax3.text(21, 24, "before: too long", color=WARN, fontsize=BASE_FONT - 2, ha="left", va="center")
-    ax3.plot([15, 19], [18, 18], color=ACCENT, lw=2.2)
-    ax3.text(21, 18, "after: corrected", color=ACCENT, fontsize=BASE_FONT - 2, ha="left", va="center")
-    ax3.text(15, 9, "Then set the tip on the arc\nat 60 mm again and\nre-check 146 mm.", color=FG,
+    ax3.plot([15, 19], [6, 6], color=WARN, lw=2, ls="--")
+    ax3.text(21, 6, "before: too long", color=WARN, fontsize=BASE_FONT - 2, ha="left", va="center")
+    ax3.plot([15, 19], [0, 0], color=ACCENT, lw=2.2)
+    ax3.text(21, 0, "after: corrected", color=ACCENT, fontsize=BASE_FONT - 2, ha="left", va="center")
+    ax3.text(15, -13, "Then set the tip on the arc\nat 60 mm again and\nre-check 146 mm.", color=FG,
              fontsize=BASE_FONT - 2, ha="left", va="center")
-    ax3.text(15, -20, "(shift drawn exaggerated)", color=muted, fontsize=BASE_FONT - 3, ha="left", va="center")
+    ax3.text(15, -38, "(shift drawn exaggerated)", color=muted, fontsize=BASE_FONT - 3, ha="left", va="center")
 
-    ax4 = fig.add_subplot(gs[1, :]); style(ax4)
+    # plot: + (past the arc, toward the viewer) is drawn BELOW the reference line
+    ax4 = fig.add_subplot(gs[2, :]); style(ax4)
     ax4.axvspan(RI, RO, color=ACCENT, alpha=0.07, lw=0)
     ax4.axhline(0, color=FG, lw=1.6)
     ax4.plot(r, np.full_like(r, extra), color=muted, lw=2.0, ls=(0, (4, 3)),
@@ -534,14 +539,52 @@ def overhang_example_figure(dp, Lp, extra=2.0):
              label="after the fix: tip on the arc at every radius")
     for rv, gv in ((R_MATCH, 0.0), (R_CHECK, 0.0), (R_CHECK, X), (R_MATCH, alt_at_60)):
         ax4.plot([rv], [gv], "o", ms=9, mfc=BG, mec=WARN, mew=2.2, zorder=5)
-    ax4.text(52, ymax_txt := extra + 1.25, "past the arc (away from the pivot) = +", color=muted,
-             fontsize=BASE_FONT - 2, va="center")
-    ax4.text(52, X - 0.95, "behind the arc (toward the pivot) = \u2212", color=muted, fontsize=BASE_FONT - 2, va="center")
-    ax4.set_xlim(50, 150); ax4.set_ylim(X - 1.4, extra + 2.3)
+    ax4.set_xlim(50, 150); ax4.set_ylim(extra + 2.3, X - 1.4)                # inverted: + at the bottom
+    ax4.text(52, extra + 1.6, "+ past the arc (toward you, away from the pivot)", color=muted, fontsize=BASE_FONT - 2, va="center")
+    ax4.text(52, X - 0.95, "\u2212 behind the arc (toward the pivot)", color=muted, fontsize=BASE_FONT - 2, va="center")
+    # true-shape view: the arc and the tip paths drawn in sheet coordinates (spindle at the bottom, pivot toward
+    # the top), with the gap to the arc exaggerated so the curved shapes can be seen.
+    axi = fig.add_subplot(gs[1, :]); style(axi)
+    kx = 6.0
+    pv = np.array([dp, 0.0])
+
+    def tip_xy(r1, rr):
+        phi = _theta(dp, L_real, r1) - _theta(dp, Lp, r1)
+        a = _theta(dp, L_real, rr) - phi
+        return np.array([rr * math.cos(a), rr * math.sin(a)])
+
+    def exaggerated(r1):
+        arc, tip = [], []
+        for rr in r:
+            v = tip_xy(r1, rr) - pv
+            D = float(np.hypot(*v)); e = v / D
+            arc.append(pv + Lp * e); tip.append(pv + (Lp + kx * (D - Lp)) * e)
+        return np.array(arc), np.array(tip)
+
+    arc60, tip60 = exaggerated(R_MATCH)
+    arc146, tip146 = exaggerated(R_CHECK)
+    axi.plot(arc60[:, 1], arc60[:, 0], color=FG, lw=2.0, label="the arc on the protractor")
+    axi.plot(tip146[:, 1], tip146[:, 0], color=WARN, lw=1.8, ls=":", label="tip path, protractor set at 146 mm")
+    axi.plot(tip60[:, 1], tip60[:, 0], color=WARN, lw=2.8, label="tip path, protractor set at 60 mm")
+    for rv, col in ((R_MATCH, good), (R_CHECK, WARN)):
+        k_ = int(np.argmin(abs(r - rv)))
+        axi.plot([tip60[k_, 1]], [tip60[k_, 0]], "o", ms=8, mfc=BG, mec=col, mew=2)
+    axi.set_title(f"True curve shapes seen on the sheet: the arc and the tip paths (radius ticks in mm; gap to the arc exaggerated x{kx:.0f})",
+                  color=FG, fontsize=BASE_FONT - 1, loc="left", pad=8)
+    axi.set_xlabel("Position along the record (mm)", color=FG, fontsize=BASE_FONT - 2)
+    axi.set_ylabel("toward pivot  \u2192", color=FG, fontsize=BASE_FONT - 2)
+    axi.legend(loc="upper left", frameon=True, facecolor=BG, edgecolor=GRID,
+               labelcolor=FG, fontsize=BASE_FONT - 3)
+    for rv in range(60, 150, 20):
+        k_ = int(np.argmin(abs(r - rv)))
+        axi.plot([arc60[k_, 1]], [arc60[k_, 0]], "|", color=FG, ms=10)
+        axi.text(arc60[k_, 1], arc60[k_, 0] - 3.5, f"{rv}", color=muted, fontsize=BASE_FONT - 3, ha="center", va="top")
+    axi.grid(True, color=GRID, lw=0.6)
     ax4.set_xlabel("Radius from spindle (mm)", color=FG, fontsize=BASE_FONT)
     ax4.set_ylabel("Tip minus arc, along the arm (mm)", color=FG, fontsize=BASE_FONT)
     ax4.grid(True, color=GRID, lw=0.8)
-    leg = ax4.legend(loc="upper right", frameon=True, facecolor=BG, edgecolor=GRID, fontsize=BASE_FONT - 3)
+    leg = ax4.legend(loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=1, frameon=True, facecolor=BG,
+                     edgecolor=GRID, fontsize=BASE_FONT - 3)
     for t in leg.get_texts():
         t.set_color(FG)
     return fig
@@ -639,6 +682,12 @@ st.markdown(
     "| 60 mm | past the arc at 146 mm (X positive) | too short | slide the cartridge forward |\n"
     "| 146 mm | past the arc at 60 mm | too long | slide the cartridge back |\n"
     "| 146 mm | behind the arc at 60 mm | too short | slide the cartridge forward |\n\n"
+    "**Why a too long overhang ends up behind the arc.** It sounds backwards, but it has been checked with a "
+    "physical test. To get the tip onto the arc at 60 mm you have to turn the whole protractor, and turning it "
+    "shifts the arc sideways by more than the overhang error itself. At 146 mm the arc has moved away from "
+    "the tip by more than the tip was too far out, so the tip ends up *behind* the line even though the "
+    "overhang is too long. If you do not turn the protractor at all, the too long overhang shows as the tip "
+    "*past* the arc everywhere.\n\n"
     f"The factors above are for this arm (L = {g['L']:.2f} mm, P2S = {g['d']:.2f} mm). They hold for misses of a "
     f"few mm. If you match at a different radius, use the calculator below."
 )
