@@ -29,7 +29,7 @@ Turn the printed protractor until the stylus is on the arc at 60 mm, then read t
 - a1 and a2 are the angles at the arm pivot, cos(a) = (P2S^2 + L^2 - r^2) / (2 * P2S * L), at r = 60 and 146 mm.
 
 For L = 233.15 mm and P2S = 214 mm: k_p2s = 1.56 (P2S change = 0.64 X) and k_ovh = 1.43 (overhang change = 0.70 X).
-The app also has a calculator that solves the exact geometry.
+The app also shows a worked example figure (overhang too long) drawn for the current protractor, and a calculator that solves the exact geometry.
 
 ## Run locally
 
