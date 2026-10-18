@@ -48,6 +48,7 @@ ACCENT = "#4cc2df"
 WARN = "#f2a561"
 
 INK, MID, LIGHT = "#111111", "#7a7a7a", "#c6c6c6"
+CUT = "#b3261e"                        # cut/fold marks for the folded-corner spindle option
 MM = 72.0 / 25.4                   # millimetres -> points
 
 
@@ -223,7 +224,19 @@ def build_scene(g, label, paper, mirror):
     for rr in (5.5, 7.5, 9.5):
         circ(0, 0, rr, 0.08, LIGHT)
     circ(0, 0, 0.3, 0.2, INK)
-    text(0, -18.5, f"SPINDLE: punch {SPINDLE_HOLE_MM:.0f} mm hole", 2.4)
+    text(0, -18.5, f"SPINDLE: punch {SPINDLE_HOLE_MM:.0f} mm hole, or cut and fold the corner", 2.4)
+
+    # no-punch alternative: right-angle triangle circumscribing the spindle hole (all three sides tangent to it).
+    # Cut the two legs, fold the flap back along the hypotenuse; the spindle then sits in the right-angle corner.
+    rs = SPINDLE_HOLE_MM / 2
+    a = rs * (2.0 + math.sqrt(2.0))
+    cx, cy = -rs, -rs                                           # right-angle corner (away from the pivot axis side)
+    line((cx, cy + a), (cx, cy), 0.35, CUT)                     # left leg, tangent to the hole
+    line((cx, cy), (cx + a, cy), 0.35, CUT)                     # bottom leg, tangent to the hole
+    line((cx + a, cy), (cx, cy + a), 0.2, CUT, (1.2, 0.9))      # hypotenuse = fold line, tangent to the hole
+    text(cx + a + 1.2, cy - 0.4, "cut", 2.1, "start", False, CUT)
+    text(cx - 1.0, cy + a + 0.8, "cut", 2.1, "end", False, CUT)
+    text(cx + a * 0.5 + 1.6, cy + a * 0.5 + 1.6, "fold", 2.1, "start", False, CUT)
 
     # arc (tip path)
     pts = [tip(ARC_R0 + (ARC_R1 - ARC_R0) * i / 240) for i in range(241)]
@@ -285,7 +298,7 @@ def build_scene(g, label, paper, mirror):
     ftxt(15.8, f"Null points {g['r1']:.2f} mm and {g['r2']:.2f} mm     "
                f"Peak tracking error {s['max']:.2f} deg at {s['at']:.1f} mm     RMS {s['rms']:.2f} deg", 2.9)
     ftxt(22.5, "1  Print at 100% (actual size, no fit-to-page) and check the 100 mm bar below.  "
-               "2  Punch the spindle hole with a 7 mm punch.", 2.5, False, MID)
+               "2  Punch a 7 mm spindle hole, or cut the red lines and fold the flap back along the dashed line.", 2.5, False, MID)
     ftxt(27, "3  Hole over the spindle, turn the sheet until the pivot axis points at the arm pivot.  "
              "4  The stylus must sit on the arc along its whole length.", 2.5, False, MID)
     bx, by = W - M - 100, top + FOOT - 3
